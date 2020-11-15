@@ -22,8 +22,9 @@ You need to link your database to your app and structure the database as like th
 
 ## Database Structure
   ### Main Structure
-  <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%201.png"/>
+  <br />
+  <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%201.png">
   
   ### Item Internal Structure - Same for all drinks and breads
-  <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%202.png"/>
+  <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%202.png">
 
