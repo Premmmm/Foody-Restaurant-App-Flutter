@@ -4,7 +4,7 @@ Foody is an restaurant app made with flutter.
 
 ## About Foody
 
-Foody uses firebase database as its backend database, and firebase auth for authentication. Foody has both customer login and manager login. Curstomers can add or remove food to their cart. Customers can change their address and contact number. Once order is placed curstomer cannot place another order until this order is delivered. Managet gets all these orders in a single screen, he can accept or cancel orders and the status of the orders can be updated with a single button such as order accepted, cooking, out for delivery etc. The manager will get realtime notification for every new order.
+Foody uses firebase database as its backend database, and firebase auth for authentication. Foody has both customer login and manager login. Curstomers can add or remove food to their cart. Customers can change their address and contact number. Once order is placed curstomer cannot place another order until this order is delivered. Managet gets all these orders in a single screen, he can accept or cancel orders and the status of the orders can be updated with a single button such as order accepted,\ cooking, out for delivery etc. The manager will get realtime notification for every new order.
 
 
 **NOTE**
