@@ -1,16 +1,28 @@
-# restaurant_app
+# Fody - Restaurant App
 
-A new Flutter application.
+Foody is an restaurant app made with flutter.
 
-## Getting Started
+## About Foody
 
-This project is a starting point for a Flutter application.
+Foody uses firebase database as its backend database, and firebase auth for authentication. Foody has both customer login and manager login. Curstomers can add or remove food to their cart. Customers can change their address and contact number. Once order is placed curstomer cannot place another order until this order is delivered. Managet gets all these orders in a single screen, he can accept or cancel orders and the status of the orders can be updated with a single button such as order accepted, cooking, out for delivery etc. The manager will get realtime notification for every new order.
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+**NOTE**
+You need to link your database to your app and structure the database as like the photos given below.
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+
+## App UI
+
+## App UI
+
+<p float="justified">
+  <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/currentitem.jpg" align="left" height="535" width="270" />
+  <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/menuscreen.jpg" align="left" height="535" width="270" />
+  <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/ordersscreen.jpg" align="left" height="535" width="270" />
+  <br />
+</p>
+
+## Database Structure
+  <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%201.png"/>
+  <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%202.png"/>
+
