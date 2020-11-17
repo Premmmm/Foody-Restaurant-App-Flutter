@@ -11,18 +11,15 @@ Foody uses firebase database as its backend database, and firebase auth for auth
 You need to link your database to your app and structure the database as like the photos given below.
 
 
-## App UI
+## App UI and Database Structure
 
-### Customer Side 
-
-![HOLAA](https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/loginscreen.jpg){:height="200px" width="200px"}
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/loginscreen.jpg" align="left" height="535" width="270">
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/menuscreen.jpg" align="left" height="535" width="270">
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/currentitem.jpg" align="left" height="535" width="270">
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/ordersscreen.jpg" align="left" height="535" width="270">
 
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/adminOrder.jpg" align="left" height="535" width="270">
-<br \><img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/acceptedOrders.jpg" align="left" height="535" width="270">
+<img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/acceptedOrders.jpg" align="left" height="535" width="270"> \
 
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%201.png">
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%202.png">
