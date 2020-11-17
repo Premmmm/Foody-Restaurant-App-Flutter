@@ -15,16 +15,13 @@ You need to link your database to your app and structure the database as like th
 
 ### Customer Side 
 
-<img src="(https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/loginscreen.jpg" align="left" height="535" width="270">
+<img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/loginscreen.jpg" align="left" height="535" width="270">
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/menuscreen.jpg" align="left" height="535" width="270">
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/currentitem.jpg" align="left" height="535" width="270">
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/ordersscreen.jpg" align="left" height="535" width="270">
 
-### Admin Side 
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/adminOrder.jpg" align="left" height="535" width="270">
 <br \><img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/acceptedOrders.jpg" align="left" height="535" width="270">
-
-## Database Structure
 
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%201.png">
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/database%20structure/foody%20database%202.png">
