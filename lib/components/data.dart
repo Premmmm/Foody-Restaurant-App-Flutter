@@ -1,18 +1,20 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:restaurant_app/components/details.dart';
 import 'package:restaurant_app/components/items.dart';
 
 class Data extends ChangeNotifier {
-  String userEmail;
+  // String userEmail;
+  User user;
   String currentLocation;
-  String userName;
+  // String userName;
   String address;
   String phoneNumber;
   int primaryIndex = 0;
   int secondaryIndex = 0;
   bool orderLive = false;
   List<String> categories;
-  String photoUrl;
+  // String photoUrl;
   bool cartEmpty = true;
   bool acceptingOrders = false;
   List<Items> selectedItems = [];
@@ -53,15 +55,19 @@ class Data extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setPhotoUrl(String _url) {
-    photoUrl = _url;
+  void setUser(User _currentUser) {
+    user = _currentUser;
     notifyListeners();
   }
+  // void setPhotoUrl(String _url) {
+  //   photoUrl = _url;
+  //   notifyListeners();
+  // }
 
-  void setUserEmail(String _email) {
-    userEmail = _email;
-    notifyListeners();
-  }
+  // void setUserEmail(String _email) {
+  //   userEmail = _email;
+  //   notifyListeners();
+  // }
 
   void setAddress(String _newAddress) {
     address = _newAddress;
@@ -78,10 +84,10 @@ class Data extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setUserName(String name) {
-    userName = name;
-    notifyListeners();
-  }
+  // void setUserName(String name) {
+  //   userName = name;
+  //   notifyListeners();
+  // }
 
   void addItemToCart(
       String name, double cost, int count, String url, String type) {
@@ -127,13 +133,14 @@ class Data extends ChangeNotifier {
   }
 
   void setEveryThingToNull() {
-    userEmail = null;
+    // userEmail = null;
     address = null;
     phoneNumber = null;
     cartEmpty = true;
-    userName = null;
+    // userName = null;
     categories = [];
-    photoUrl = null;
+    user = null;
+    // photoUrl = null;
     selectedItems = [];
     notifyListeners();
   }

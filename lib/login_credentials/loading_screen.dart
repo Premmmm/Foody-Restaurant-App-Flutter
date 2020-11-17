@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import 'package:restaurant_app/admin/AllAdminScreen.dart';
 import 'package:restaurant_app/login_credentials/login_screen.dart';
 import 'package:restaurant_app/screens/main_menu_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:restaurant_app/components/MySlide.dart';
 import 'package:restaurant_app/components/data.dart';
 
@@ -97,51 +97,73 @@ class _LoadingScreenState extends State<LoadingScreen> {
   }
 
   Future<void> getLoginInfo() async {
-    var prefs1 = await SharedPreferences.getInstance();
-    var _email = prefs1.getString('foodyUserEmail').toString();
-    print('USER EMAIL:  $_email');
     try {
-      if (_email != 'null') {
-        if (_email == 'premwork.pr@gmail.com') {
-          Navigator.push(context, ScaleRoute(page: AllAdminScreen()));
+      FirebaseAuth.instance.authStateChanges().listen((User user) {
+        if (user == null) {
+          print('User is currently signed out!');
+          Navigator.push(context, ScaleRoute(page: LoginScreen()));
         } else {
-          try {
-            firestore.collection(_email).doc('contactCredentials').get().then(
-              (snapshot) {
-                if (snapshot.data != null) {
-                  Map<dynamic, dynamic> values = snapshot.data();
-                  values.forEach(
-                    (key, value) {
-                      if (key.toString() == 'loggedIn') {
-                        if (value.toString() == 'yes') {
-                          Provider.of<Data>(context, listen: false)
-                              .setUserEmail(_email);
-                          Navigator.push(
-                              context, ScaleRoute(page: MainMenuScreen()));
-                        } else {
-                          Navigator.push(
-                              context, ScaleRoute(page: LoginScreen()));
-                        }
-                      }
-                    },
-                  );
-                } else {
-                  Navigator.push(context, ScaleRoute(page: LoginScreen()));
-                }
-              },
-            );
-          } catch (e) {
-            print('Firestore error $e');
-            Navigator.push(context, ScaleRoute(page: LoginScreen()));
+          print('User is signed in!');
+          if (user.email == 'premwork.pr@gmail.com') {
+            Navigator.push(context, ScaleRoute(page: AllAdminScreen()));
+          } else {
+            Provider.of<Data>(context, listen: false).setUser(user);
+            Navigator.push(context, ScaleRoute(page: MainMenuScreen()));
           }
         }
-      } else {
-        Navigator.push(context, ScaleRoute(page: LoginScreen()));
-      }
-    } catch (e) {
-      print('Error in splash screen: $e');
+      });
+    } on FirebaseException {
+      print('Loading screen getLoginInfo firebase exception');
       Navigator.push(context, ScaleRoute(page: LoginScreen()));
+    } catch (e) {
+      print('Loading screen getLoginInfo error $e');
     }
+
+    // var prefs1 = await SharedPreferences.getInstance();
+    // var _email = prefs1.getString('foodyUserEmail').toString();
+    // print('USER EMAIL:  $_email');
+    // try {
+    //   if (_email != 'null') {
+    //     if (_email == 'premwork.pr@gmail.com') {
+    //       Navigator.push(context, ScaleRoute(page: AllAdminScreen()));
+    //     } else {
+    //       try {
+    //         firestore.collection(_email).doc('contactCredentials').get().then(
+    //           (snapshot) {
+    //             if (snapshot.data != null) {
+    //               Map<dynamic, dynamic> values = snapshot.data();
+    //               values.forEach(
+    //                 (key, value) {
+    //                   if (key.toString() == 'loggedIn') {
+    //                     if (value.toString() == 'yes') {
+    //                       // Provider.of<Data>(context, listen: false)
+    //                       //     .setUserEmail(_email);
+    //                       Navigator.push(
+    //                           context, ScaleRoute(page: MainMenuScreen()));
+    //                     } else {
+    //                       Navigator.push(
+    //                           context, ScaleRoute(page: LoginScreen()));
+    //                     }
+    //                   }
+    //                 },
+    //               );
+    //             } else {
+    //               Navigator.push(context, ScaleRoute(page: LoginScreen()));
+    //             }
+    //           },
+    //         );
+    //       } catch (e) {
+    //         print('Firestore error $e');
+    //         Navigator.push(context, ScaleRoute(page: LoginScreen()));
+    //       }
+    //     }
+    //   } else {
+    //     Navigator.push(context, ScaleRoute(page: LoginScreen()));
+    //   }
+    // } catch (e) {
+    //   print('Error in splash screen: $e');
+    //   Navigator.push(context, ScaleRoute(page: LoginScreen()));
+    // }
   }
 
   @override

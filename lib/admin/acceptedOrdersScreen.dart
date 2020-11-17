@@ -160,55 +160,47 @@ class _CurrentOrderCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(
-              height: 5,
-            ),
+            SizedBox(height: 5),
             Text(order, style: GoogleFonts.montserrat(fontSize: 12)),
-            SizedBox(
-              height: 10,
-            ),
+            SizedBox(height: 10),
             Text('Delivery Details',
                 style: GoogleFonts.montserrat(
                     fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(
-              height: 5,
-            ),
+            SizedBox(height: 5),
             Text('Address',
                 style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
             Text(address, style: GoogleFonts.montserrat(fontSize: 12)),
-            SizedBox(
-              height: 5,
-            ),
+            SizedBox(height: 5),
             Text('Phone number',
                 style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
             Text(mobileNumber, style: GoogleFonts.montserrat(fontSize: 12)),
-            SizedBox(
-              height: 15,
-            ),
-            Divider(
-              thickness: 2,
-            ),
-            SizedBox(
-              height: 5,
-            ),
+            SizedBox(height: 15),
+            Divider(thickness: 2),
+            SizedBox(height: 5),
             Center(
               child: ElevatedButton(
                 style: ButtonStyle(
                   backgroundColor:
                       MaterialStateProperty.resolveWith((states) => Colors.red),
                 ),
-                onPressed: status != 'outForDelivery'
+                onPressed: status != 'delivered'
                     ? () {
                         String st;
                         if (status == 'accepted')
                           st = 'cooking';
-                        else if (status == 'cooking') st = 'outForDelivery';
+                        else if (status == 'cooking')
+                          st = 'outForDelivery';
+                        else if (status == 'outForDelivery') st = 'delivered';
                         firestore
                             .collection('orders')
                             .doc(date)
                             .collection('orders')
                             .doc(docID)
                             .update({'status': st});
+                        firestore
+                            .collection(email)
+                            .doc('currentOrder')
+                            .update({st: 'yes'});
                       }
                     : null,
                 child: Text('Update Status'),

@@ -7,9 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:restaurant_app/admin/AllAdminScreen.dart';
+import 'package:restaurant_app/components/constants.dart';
 import 'package:restaurant_app/components/data.dart';
 import 'package:restaurant_app/screens/top_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:modal_progress_hud/modal_progress_hud.dart';
 import 'package:provider/provider.dart';
@@ -71,61 +71,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-//   Future<void> signIn() async {
-//     try {
-//       AuthResult k = await FirebaseAuth.instance
-//           .signInWithEmailAndPassword(email: email, password: password);
-//       if (k != null) {
-//         var prefs1 = await SharedPreferences.getInstance();
-//         var prefs2 = await SharedPreferences.getInstance();
-//         await prefs1.setString('loginEmail', email);
-//         await prefs2.setString('loginPassword', password);
-
-//         setState(() {
-//           isSpinning = false;
-//         });
-//         Provider.of<Data>(context, listen: false).setUserEmail(email);
-//         if (email != 'auth1@gmail.com') {
-//           Navigator.push(context, ScaleRoute(page: MainMenuScreen()));
-//         } else if (email == 'auth1@gmail.com') {
-// //          Navigator.push(context, ScaleRoute(page:AdminOptionScreen()));
-//           // Navigator.push(context, ScaleRoute(page: OrdersScreen()));
-//         }
-//       }
-//     } on PlatformException {
-//       setState(() {
-//         isSpinning = false;
-//       });
-//       _scaffoldKey.currentState.showSnackBar(SnackBar(
-//         backgroundColor: Colors.red,
-//         duration: Duration(seconds: 2),
-//         content: Container(
-//             height: 40,
-//             child: Center(
-//                 child: Text(
-//               'Incorrect email or password',
-//               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-//             ))),
-//       ));
-//     } catch (e) {
-//       setState(() {
-//         isSpinning = false;
-//       });
-//       _scaffoldKey.currentState.showSnackBar(SnackBar(
-//         backgroundColor: Colors.red,
-//         duration: Duration(seconds: 2),
-//         content: Container(
-//             height: 40,
-//             child: Center(
-//                 child: Text(
-//               'An error occurred while signing in',
-//               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-//             ))),
-//       ));
-//       print('Sign in la error ${e.message}');
-//     }
-//   }
-
   // ignore: missing_return
   Future<String> signInWithGoogle() async {
     setState(() {
@@ -153,8 +98,8 @@ class _LoginScreenState extends State<LoginScreen> {
         final User currentUser = _auth.currentUser;
         assert(user.uid == currentUser.uid);
         print(user.uid);
-        var prefs1 = await SharedPreferences.getInstance();
-        await prefs1.setString('foodyUserEmail', user.email.toString());
+        // var prefs1 = await SharedPreferences.getInstance();
+        // await prefs1.setString('foodyUserEmail', user.email.toString());
         if (user.email != 'premwork.pr@gmail.com') {
           await fireStoreDataBase
               .collection(user.email.toString())
@@ -190,14 +135,16 @@ class _LoginScreenState extends State<LoginScreen> {
               });
             }
           });
-          Provider.of<Data>(context, listen: false).setPhotoUrl(user.photoURL);
-          Provider.of<Data>(context, listen: false)
-              .setUserName(user.displayName);
-          Provider.of<Data>(context, listen: false).setUserEmail(user.email);
-          Provider.of<Data>(context, listen: false)
-              .setPhoneNumber(user.phoneNumber);
+          Provider.of<Data>(context, listen: false).setUser(user);
+          // Provider.of<Data>(context, listen: false).setPhotoUrl(user.photoURL);
+          // Provider.of<Data>(context, listen: false)
+          //     .setUserName(user.displayName);
+          // Provider.of<Data>(context, listen: false).setUserEmail(user.email);
+          // Provider.of<Data>(context, listen: false)
+          //     .setPhoneNumber(user.phoneNumber);
         } else {
-          Provider.of<Data>(context, listen: false).setUserEmail(user.email);
+          // Provider.of<Data>(context, listen: false).setUserEmail(user.email);
+          Provider.of<Data>(context, listen: false).setUser(user);
         }
         print('Sign in with GOOGLE SUCCEDEED');
         print('DISPLAY NAME:   ${user.displayName}');
@@ -234,6 +181,61 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> onSignInButtonPressed() async {
+    await checkConnection();
+    if (isConnected) {
+      FocusScope.of(context).unfocus();
+      googleSignIn.signOut();
+      signInWithGoogle().then(
+        (result) {
+          if (result != null) {
+            setState(() {
+              isSpinning = false;
+            });
+            if (Provider.of<Data>(context, listen: false).user.email ==
+                'premwork.pr@gmail.com') {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => AllAdminScreen(),
+                ),
+              );
+            } else
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) {
+                    return TopScreen();
+                  },
+                ),
+              );
+          } else {
+            setState(() {
+              isSpinning = false;
+            });
+            _scaffoldKey.currentState.showSnackBar(
+              SnackBar(
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 2),
+                content: Container(
+                  height: 40,
+                  child: Center(
+                    child: Text(
+                      'An error occurred while signing in',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Montserrat',
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -251,8 +253,8 @@ class _LoginScreenState extends State<LoginScreen> {
               width: MediaQuery.of(context).size.width,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                    image: AssetImage('images/pancakes_in_a_pan.png'),
-                    fit: BoxFit.cover),
+                    image: AssetImage('assets/images/bg3.jpg'),
+                    fit: BoxFit.fitHeight),
               ),
               alignment: Alignment.bottomCenter,
               child: Container(
@@ -261,19 +263,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Stack(
                   children: [
                     Padding(
-                      padding: EdgeInsets.only(top: 40),
+                      padding: EdgeInsets.only(top: 30.0),
                       child: Align(
-                        alignment: Alignment.topCenter,
+                        alignment: Alignment.center,
                         child: Material(
                           color: Colors.transparent,
                           elevation: 30,
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              'foody',
+                              'FOODY',
                               style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 75,
+                                  fontSize: 55,
                                   fontFamily: 'Montserrat',
                                   letterSpacing: 3,
                                   color: Colors.white),
@@ -287,70 +289,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       left: 0,
                       right: 0,
                       child: Container(
-                        height: 75,
+                        height: 55,
                         margin: EdgeInsets.only(
-                            left: 20, right: 20, bottom: 10, top: 10),
+                          left: 20,
+                          right: 20,
+                          bottom: 10,
+                          top: 10,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.indigo,
+                          color: Colors.indigo[600],
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: FlatButton(
-                          onPressed: () async {
-                            await checkConnection();
-                            if (isConnected) {
-                              FocusScope.of(context).unfocus();
-                              googleSignIn.signOut();
-                              signInWithGoogle().then(
-                                (result) {
-                                  if (result != null) {
-                                    setState(() {
-                                      isSpinning = false;
-                                    });
-                                    if (Provider.of<Data>(context,
-                                                listen: false)
-                                            .userEmail ==
-                                        'premwork.pr@gmail.com') {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              AllAdminScreen(),
-                                        ),
-                                      );
-                                    } else
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) {
-                                            return TopScreen();
-                                          },
-                                        ),
-                                      );
-                                  } else {
-                                    setState(() {
-                                      isSpinning = false;
-                                    });
-                                    _scaffoldKey.currentState.showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: Colors.red,
-                                        duration: Duration(seconds: 2),
-                                        content: Container(
-                                          height: 40,
-                                          child: Center(
-                                            child: Text(
-                                              'An error occurred while signing in',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontFamily: 'Montserrat',
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
-                              );
-                            }
+                          onPressed: () {
+                            onSignInButtonPressed();
                           },
                           child: ListTile(
                             leading: Image.asset(
@@ -567,6 +519,63 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
+//   Future<void> signIn() async {
+//     try {
+//       AuthResult k = await FirebaseAuth.instance
+//           .signInWithEmailAndPassword(email: email, password: password);
+//       if (k != null) {
+//         var prefs1 = await SharedPreferences.getInstance();
+//         var prefs2 = await SharedPreferences.getInstance();
+//         await prefs1.setString('loginEmail', email);
+//         await prefs2.setString('loginPassword', password);
+
+//         setState(() {
+//           isSpinning = false;
+//         });
+//         Provider.of<Data>(context, listen: false).setUserEmail(email);
+//         if (email != 'auth1@gmail.com') {
+//           Navigator.push(context, ScaleRoute(page: MainMenuScreen()));
+//         } else if (email == 'auth1@gmail.com') {
+// //          Navigator.push(context, ScaleRoute(page:AdminOptionScreen()));
+//           // Navigator.push(context, ScaleRoute(page: OrdersScreen()));
+//         }
+//       }
+//     } on PlatformException {
+//       setState(() {
+//         isSpinning = false;
+//       });
+//       _scaffoldKey.currentState.showSnackBar(SnackBar(
+//         backgroundColor: Colors.red,
+//         duration: Duration(seconds: 2),
+//         content: Container(
+//             height: 40,
+//             child: Center(
+//                 child: Text(
+//               'Incorrect email or password',
+//               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+//             ))),
+//       ));
+//     } catch (e) {
+//       setState(() {
+//         isSpinning = false;
+//       });
+//       _scaffoldKey.currentState.showSnackBar(SnackBar(
+//         backgroundColor: Colors.red,
+//         duration: Duration(seconds: 2),
+//         content: Container(
+//             height: 40,
+//             child: Center(
+//                 child: Text(
+//               'An error occurred while signing in',
+//               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+//             ))),
+//       ));
+//       print('Sign in la error ${e.message}');
+//     }
+//   }
+
+// ignore: missing_return
 
 //        await _fireStoreDataBase
 //            .collection(email)

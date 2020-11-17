@@ -28,7 +28,7 @@ class _AddressBottomSheetState extends State<AddressBottomSheet> {
 
   void getOldAddressAndNumber() {
     String oldAddress = Provider.of<Data>(context, listen: false).address;
-    String oldNumber = Provider.of<Data>(context, listen: false).phoneNumber;
+    String oldNumber = Provider.of<Data>(context, listen: false).user.phoneNumber;
     print('$oldAddress $oldNumber');
     if (oldAddress != 'null' && oldNumber != 'null') {
       setState(() {
@@ -239,7 +239,7 @@ class _AddressBottomSheetState extends State<AddressBottomSheet> {
                         .setPhoneNumber(number);
                     await firestoreDatabase
                         .collection(
-                            Provider.of<Data>(context, listen: false).userEmail)
+                            Provider.of<Data>(context, listen: false).user.email)
                         .doc('contactCredentials')
                         .update({'address': address, 'mobileNumber': number});
                     setState(() {

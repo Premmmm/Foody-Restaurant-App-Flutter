@@ -4,10 +4,10 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:modal_progress_hud/modal_progress_hud.dart';
 import 'package:provider/provider.dart';
 import 'package:restaurant_app/components/MySlide.dart';
+import 'package:restaurant_app/components/constants.dart';
 import 'package:restaurant_app/components/data.dart';
 import 'package:restaurant_app/login_credentials/loading_screen.dart';
 import 'package:restaurant_app/login_credentials/login_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 final _firestore = FirebaseFirestore.instance;
 
@@ -20,17 +20,19 @@ class _AccountScreenState extends State<AccountScreen> {
   String name = '';
   String mobileNumber = '';
   bool isSpinning = false;
+  Constants _constants;
 
   @override
   void initState() {
     super.initState();
+    _constants = Constants();
     getContactDetails();
   }
 
   Future getContactDetails() async {
     await _firestore
         .collection(
-            Provider.of<Data>(context, listen: false).userEmail.toString())
+            Provider.of<Data>(context, listen: false).user.email.toString())
         .doc('contactCredentials')
         .get()
         .then((value) {
@@ -51,89 +53,106 @@ class _AccountScreenState extends State<AccountScreen> {
     });
   }
 
+  Future<void> _onSignOut() async {
+    GoogleSignIn().signOut();
+    try {
+      await firestore
+          .collection(Provider.of<Data>(context, listen: false).user.email)
+          .doc('contactCredentials')
+          .update({'loggedIn': 'no'})
+          .then((value) => print('Success'))
+          .catchError((e) => print(e));
+      Navigator.push(context, SlideRightRoute(page: LoginScreen()));
+      Provider.of<Data>(context, listen: false).setEveryThingToNull();
+    } on FirebaseException {
+      print('Customer sign out firebase exception');
+    } catch (e) {
+      print('customer sign out exception $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    Size screensize = MediaQuery.of(context).size;
     return ModalProgressHUD(
       inAsyncCall: isSpinning,
       child: Scaffold(
-        backgroundColor: Colors.grey[900],
+        backgroundColor: _constants.backgroundColor,
         appBar: AppBar(
-          backgroundColor: Color(0xFF13161D),
+          backgroundColor: _constants.appbarBackgroundColor,
           automaticallyImplyLeading: false,
-          title: ListTile(
-            title: Text(
-              name.toUpperCase(),
-              style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Colors.white),
-            ),
-            subtitle: Row(
-              children: <Widget>[
-                Text(
-                  mobileNumber == 'null' ? '' : mobileNumber,
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-                Text(
-                  name != null
-                      ? name != ''
-                          ? ' • ${Provider.of<Data>(context).userEmail}'
-                          : ' '
-                      : ' ',
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ],
-            ),
+          title: Text(
+            'PROFILE',
+            style: TextStyle(fontFamily: 'Montserrat', letterSpacing: 1.4),
           ),
         ),
         body: Stack(
           children: <Widget>[
             Scrollbar(
-              child: Center(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: <Widget>[
-                    Center(
-                      child: Container(
-                        width: 150,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.blue[800],
-                        ),
-                        child: FlatButton(
-                          onPressed: () async {
-                            GoogleSignIn().signOut();
-                            var _pref = await SharedPreferences.getInstance();
-                            _pref.remove('foodyUserEmail');
-                            try {
-                              await firestore
-                                  .collection(
-                                      Provider.of<Data>(context, listen: false)
-                                          .userEmail)
-                                  .doc('contactCredentials')
-                                  .update({'loggedIn': 'no'})
-                                  .then((value) => print('Success'))
-                                  .catchError((e) => print(e));
-                            } catch (e) {
-                              print(e);
-                            }
-                            Provider.of<Data>(context, listen: false)
-                                .setEveryThingToNull();
-                            Navigator.push(context, MySlide(builder: (context) {
-                              return LoginScreen();
-                            }));
-                          },
-                          child: Text(
-                            'Sign Out',
-                            style: TextStyle(
-                                color: Colors.white, fontFamily: 'Montserrat'),
+              child: ListView(
+                padding: EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+                shrinkWrap: true,
+                children: <Widget>[
+                  Container(
+                    height: screensize.height * 0.15,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              Provider.of<Data>(context).user.photoURL,
+                              width: 150,
+                              height: 150,
+                            ),
                           ),
+                        ),
+                        SizedBox(width: 20),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Text(
+                                Provider.of<Data>(context)
+                                        .user
+                                        .displayName
+                                        .toUpperCase() ??
+                                    'User Name',
+                                style: TextStyle(
+                                    fontFamily: 'Montserrat', fontSize: 22)),
+                            Text(
+                                Provider.of<Data>(context).user.email ??
+                                    'User Email',
+                                style: TextStyle(fontFamily: 'Montserrat')),
+                            Text(
+                                Provider.of<Data>(context).phoneNumber ??
+                                    'Phone Number',
+                                style: TextStyle(fontFamily: 'Montserrat')),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Center(
+                    child: Container(
+                      width: 150,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.blue[800],
+                      ),
+                      child: FlatButton(
+                        onPressed: _onSignOut,
+                        child: Text(
+                          'Sign Out',
+                          style: TextStyle(
+                              color: Colors.white, fontFamily: 'Montserrat'),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],

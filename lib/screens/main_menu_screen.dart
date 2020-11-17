@@ -8,10 +8,8 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:geocoder/geocoder.dart';
 import 'package:modal_progress_hud/modal_progress_hud.dart';
 import 'package:provider/provider.dart';
-import 'package:restaurant_app/admin/acceptedOrdersScreen.dart';
 import 'package:restaurant_app/components/MySlide.dart';
 import 'package:restaurant_app/components/NotificationCheck.dart';
-import 'package:restaurant_app/components/data.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:restaurant_app/screens/cart_screen.dart';
 import 'package:restaurant_app/screens/account_screen.dart';
@@ -19,9 +17,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:restaurant_app/components/details.dart';
+import 'package:restaurant_app/components/data.dart';
 import 'package:restaurant_app/screens/viewitemscreen.dart';
 
-final _realTimeDatabase = FirebaseDatabase.instance.reference();
+final _firebasedb = FirebaseDatabase.instance.reference();
 final _firestoredb = FirebaseFirestore.instance;
 final FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
 FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
@@ -33,18 +32,21 @@ class MainMenuScreen extends StatefulWidget {
 
 class _MainMenuScreenState extends State<MainMenuScreen> {
   bool isSpinning = false, locationSpinning = false;
-
   ScrollController _scrollController = ScrollController();
+  double orderContainerHeight = -80;
+  TextStyle googleFonts;
 
   @override
   void initState() {
     super.initState();
-    print(Provider.of<Data>(context, listen: false).userEmail);
+    googleFonts = GoogleFonts.montserrat();
+    print(Provider.of<Data>(context, listen: false).user.email);
     _firebaseMessaging.getToken().then(
           (value) => {
             print('Firebase Messaging token: $value'),
             _firestoredb
-                .collection(Provider.of<Data>(context, listen: false).userEmail)
+                .collection(
+                    Provider.of<Data>(context, listen: false).user.email)
                 .doc('userToken')
                 .set({
                   'token': value.toString(),
@@ -61,7 +63,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
   Future<void> checkCurrentOrder() async {
     await _firestoredb
-        .collection((Provider.of<Data>(context, listen: false).userEmail))
+        .collection((Provider.of<Data>(context, listen: false).user.email))
         .doc('currentOrder')
         .get()
         .then((value) {
@@ -114,7 +116,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     List<CategoriesAndDetails> _categoriesAndDetails = [];
     List<Details> _details = [];
     int count = 0;
-    await _realTimeDatabase.child('categories').once().then(
+    await _firebasedb.child('categories').once().then(
       (snapshot) {
         if (snapshot.value != null) {
           Map<dynamic, dynamic> values = snapshot.value;
@@ -132,7 +134,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
     Provider.of<Data>(context, listen: false).setCategories(_categories);
 
-    await _realTimeDatabase.child('itemList').once().then(
+    await _firebasedb.child('itemList').once().then(
       (snapshot) {
         if (snapshot.value != null) {
           Map<dynamic, dynamic> values = snapshot.value;
@@ -167,10 +169,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       },
     );
 
-    print(_reviewers);
-    print(_rating);
-    print(count);
-
     for (int i = 0; i < count; i++) {
       _details.add(Details(
         name: _name[i],
@@ -199,7 +197,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       _details = [];
       _reviewers = [];
       if (category != 'Pizza') {
-        await _realTimeDatabase
+        await _firebasedb
             .child('itemList')
             .child(category.toString())
             .once()
@@ -255,9 +253,13 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
         ));
       }
     }
-
     Provider.of<Data>(context, listen: false)
         .setCategoriesAndDetails(_categoriesAndDetails);
+    Future.delayed(Duration(seconds: 1), () {
+      setState(() {
+        orderContainerHeight = 0;
+      });
+    });
   }
 
   void scrollTo(double value) {
@@ -295,14 +297,19 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       : Colors.white,
                 ),
                 onPressed: () {
-                  Navigator.push(context, MySlide(builder: (context) {
-                    return CartScreen();
-                  }));
+                  if (!Provider.of<Data>(context, listen: false).orderLive) {
+                    Navigator.push(context, MySlide(builder: (context) {
+                      return CartScreen();
+                    }));
+                  } else {
+                    if (orderContainerHeight != 0)
+                      setState(() {
+                        orderContainerHeight = 0;
+                      });
+                  }
                 },
               ),
-              SizedBox(
-                width: 5,
-              ),
+              SizedBox(width: 5),
               IconButton(
                 highlightColor: Colors.transparent,
                 icon: Image.asset(
@@ -315,9 +322,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                   }));
                 },
               ),
-              SizedBox(
-                width: 5,
-              )
+              SizedBox(width: 5)
             ],
             title: TextButton(
               onPressed: () {
@@ -340,26 +345,159 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     ),
             ),
           ),
-          body: SingleChildScrollView(
-            physics: BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                Provider.of<Data>(context).categoriesAndDetails.length != 0
-                    ? _CategoriesAndItems()
-                    : Center(
-                        child: CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      ),
-                SizedBox(
-                  height: 100,
+          body: Stack(
+            children: [
+              SingleChildScrollView(
+                physics: BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    Provider.of<Data>(context).categoriesAndDetails.length != 0
+                        ? _CategoriesAndItems()
+                        : Center(
+                            child: CircularProgressIndicator(
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                    SizedBox(height: 100),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Visibility(
+                visible: Provider.of<Data>(context).orderLive,
+                child: AnimatedPositioned(
+                  duration: Duration(milliseconds: 700),
+                  bottom: orderContainerHeight,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 80,
+                    color: Colors.grey[600],
+                    child: _OrderStatusStream(),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _OrderStatusStream extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var provider = Provider.of<Data>(context);
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _firestoredb
+          .collection(provider.user.email)
+          .doc('currentOrder')
+          .snapshots(),
+      builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+        if (!snapshot.hasData) {
+          return Center(
+            child: CircularProgressIndicator(
+              backgroundColor: Colors.lightBlueAccent,
+            ),
+          );
+        }
+
+        String _currentStatusmessage;
+        bool _ordered = false;
+        bool _accepted = false;
+        bool _cooking = false;
+        bool _outForDelivery = false;
+        bool _delivered = false;
+
+        var data = snapshot.data.data();
+        Map<String, dynamic> values = data;
+        values.forEach((key, value) {
+          if (key.toString() == 'ordered') if (value.toString() == 'yes') {
+            print('ordered');
+            _ordered = true;
+          }
+          if (key.toString() == 'accepted') if (value.toString() == 'yes') {
+            print('accepted');
+            _accepted = true;
+          }
+          if (key.toString() == 'cooking') if (value.toString() == 'yes') {
+            print('cooking');
+            _cooking = true;
+          }
+          if (key.toString() == 'outForDelivery') if (value.toString() ==
+              'yes') {
+            print('outfordelivery');
+            _outForDelivery = true;
+          }
+          if (key.toString() == 'delivered') if (value.toString() == 'yes') {
+            Provider.of<Data>(context, listen: false).setOrderLive(false);
+            _delivered = true;
+            _firestoredb
+                .collection(provider.user.email)
+                .doc('currentOrder')
+                .delete();
+          }
+        });
+
+        if (_ordered) {
+          _currentStatusmessage =
+              'Waiting for restaurant to confirm your order !';
+
+          if (_accepted) {
+            _currentStatusmessage = 'Restaurant has accepted your order.';
+
+            if (_cooking) {
+              _currentStatusmessage = 'Your delicious food is cooking !';
+            }
+            if (_outForDelivery) {
+              _currentStatusmessage =
+                  'Your food is out for delivery and will reach your soon !';
+            }
+          }
+        }
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            SizedBox(
+              height: 70,
+              width: 70,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: _delivered
+                    ? Image.asset('assets/images/delivered.jpg')
+                    : _outForDelivery
+                        ? Image.asset('assets/images/delivery.jpg')
+                        : _cooking
+                            ? Image.asset('assets/images/cooking.jpg')
+                            : _accepted
+                                ? Image.asset('assets/images/accepted.jpg')
+                                : _ordered
+                                    ? Image.asset('assets/images/ordered.jpg')
+                                    : null,
+
+                // _currentStatus == 'ordered'
+                //     ? Image.asset('assets/images/ordered.jpg')
+                //     : _currentStatus == 'accepted'
+                //         ? Image.asset('assets/images/accepted.jpg')
+                //         : _currentStatus == 'cooking'
+                //             ? Image.asset('assets/images/cooking.jpg')
+                //             : _currentStatus == 'outForDelivery'
+                //                 ? Image.asset('assets/images/delivery.jpg')
+                //                 : null,
+              ),
+            ),
+            Center(
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.65,
+                child: Text(_currentStatusmessage,
+                    style: TextStyle(fontFamily: 'Montserrat', fontSize: 16)),
+              ),
+            )
+          ],
+        );
+      },
     );
   }
 }
@@ -579,10 +717,6 @@ class _ItemContainerWidget extends StatelessWidget {
                   )
                 ],
               ),
-              // Text(
-              //   '( ${item.reviewers}  Reviews )',
-              //   style: GoogleFonts.montserrat(),
-              // )
             ],
           ),
         ],

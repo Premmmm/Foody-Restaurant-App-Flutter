@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:restaurant_app/components/AlertDialogCustom.dart';
 import 'package:restaurant_app/screens/cart_screen.dart';
 import 'package:restaurant_app/screens/main_menu_screen.dart';
 
@@ -11,15 +12,20 @@ class _TopScreenState extends State<TopScreen> {
   PageController pageController = PageController(initialPage: 0);
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: PageView(
-        controller: pageController,
-        physics: ScrollPhysics(parent: NeverScrollableScrollPhysics()),
-        onPageChanged: (index) {},
-        children: <Widget>[
-          MainMenuScreen(),
-          CartScreen(),
-        ],
+    return WillPopScope(
+      onWillPop: () {
+        return AlertDialogCustom().onBackPressed(context);
+      },
+      child: Scaffold(
+        body: PageView(
+          controller: pageController,
+          physics: ScrollPhysics(parent: NeverScrollableScrollPhysics()),
+          onPageChanged: (index) {},
+          children: <Widget>[
+            MainMenuScreen(),
+            CartScreen(),
+          ],
+        ),
       ),
     );
   }

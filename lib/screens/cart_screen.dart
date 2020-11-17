@@ -1,15 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:modal_progress_hud/modal_progress_hud.dart';
 import 'package:provider/provider.dart';
+import 'package:translator/translator.dart';
+import 'package:vibration/vibration.dart';
 import 'package:restaurant_app/components/addressBottomSheet.dart';
 import 'package:restaurant_app/components/data.dart';
 import 'package:restaurant_app/components/items.dart';
-import 'package:restaurant_app/login_credentials/login_screen.dart';
-import 'package:vibration/vibration.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:modal_progress_hud/modal_progress_hud.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 final _firestoredb = FirebaseFirestore.instance;
 
@@ -46,18 +46,37 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
+
     setState(() {
       isSpinning = true;
     });
-    getCustomerDetails();
+    trans();
+    if (Provider.of<Data>(context, listen: false).address == null ||
+        Provider.of<Data>(context, listen: false).phoneNumber == null)
+      getCustomerDetails();
     getItems();
+  }
+
+  void trans() async {
+    final translator = GoogleTranslator();
+
+    final input = "Muthukumar";
+
+    translator.translate(input, from: 'en', to: 'ta').then(print);
+    // prints Hello. Are you okay?
+
+    var translation =
+        await translator.translate("Dart is very cool!", to: 'ta');
+    print(translation);
+    // prints Dart jest bardzo fajny!
+
+    print(await "example".translate(to: 'pt'));
   }
 
   Future<void> getCustomerDetails() async {
     List parentNames = [];
-
     _firestoredb
-        .collection(Provider.of<Data>(context, listen: false).userEmail)
+        .collection(Provider.of<Data>(context, listen: false).user.email)
         .doc('contactCredentials')
         .get()
         .then(
@@ -67,11 +86,11 @@ class _CartScreenState extends State<CartScreen> {
           values.forEach((key, value1) {
             parentNames.add(key.toString());
             if (key.toString() == 'mobileNumber') {
-              Provider.of<Data>(context, listen: false)
-                  .setPhoneNumber(value1.toString());
-            } else if (key.toString() == 'name') {
-              Provider.of<Data>(context, listen: false)
-                  .setUserName(value1.toString());
+              if (Provider.of<Data>(context, listen: false).user.phoneNumber ==
+                  null) {
+                Provider.of<Data>(context, listen: false)
+                    .setPhoneNumber(value1.toString());
+              }
             }
           });
           if (parentNames.contains('address')) {
@@ -81,8 +100,6 @@ class _CartScreenState extends State<CartScreen> {
                     .setAddress(value2.toString());
               }
             });
-          } else {
-            print('no address daww');
           }
         }
       },
@@ -153,27 +170,45 @@ class _CartScreenState extends State<CartScreen> {
         .collection('orders')
         .doc()
         .set({
-          'email': provider.userEmail.toString(),
+          'email': provider.user.email.toString(),
           'order': '$_itemName',
           'time': DateTime.now().toString(),
           'count': '$_itemCount',
           'type': '$_itemType',
           'url': '$_itemUrl',
           'total': '$toPay',
-          'name': provider.userName,
+          'name': provider.user.displayName,
           'mobileNumber': provider.phoneNumber,
           'deliveryAddress': provider.address,
           'status': 'waiting'
         })
         .then((value) => print('Order Set Successfully'))
         .catchError((error) => print('Ordering error $error'));
-    await _firestoredb.collection(provider.userEmail).doc('currentOrder').set({
+
+    await _firestoredb
+        .collection(provider.user.email)
+        .doc('allOrders')
+        .collection('orders')
+        .doc()
+        .set({
+      'order': '$_itemName',
+      'time': DateTime.now().toString(),
+      'count': '$_itemCount',
+      'type': '$_itemType',
+      'url': '$_itemUrl',
+      'total': '$toPay',
+      'deliveryAddress': provider.address,
+      'status': 'waiting'
+    });
+
+    await _firestoredb.collection(provider.user.email).doc('currentOrder').set({
       'ordered': 'yes',
       'accepted': 'not yet',
       'cooking': 'not yet',
       'outForDelivery': 'not yet',
       'delivered': 'not yet',
     });
+
     provider.setOrderLive(true);
     provider.setOrderToNull();
     setState(() {
@@ -183,7 +218,106 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (Provider.of<Data>(context).orderLive) {
+    if (Provider.of<Data>(context).orderLive) Navigator.pop(context);
+    // Scaffold(
+    //   backgroundColor: Color(0xAA121212),
+    //   appBar: AppBar(
+    //     elevation: 10,
+    //     automaticallyImplyLeading: false,
+    //     backgroundColor: Color(0xFF13161D),
+    //     title: Row(
+    //       children: <Widget>[
+    //         Text(
+    //           'Order Status',
+    //           style: GoogleFonts.montserrat(fontSize: 25),
+    //         ),
+    //         SizedBox(
+    //           width: 13,
+    //         ),
+    //         Image.asset(
+    //           'images/plate.png',
+    //           width: 28,
+    //           height: 28,
+    //         ),
+    //       ],
+    //     ),
+    //   ),
+    //   body: _OrderUpdateStream(),
+    // );
+
+    if (Provider.of<Data>(context).cartEmpty ||
+        orders.length == null ||
+        orders.length == 0) {
+      return Scaffold(
+        backgroundColor: Colors.grey[900],
+        appBar: AppBar(
+          elevation: 10,
+          backgroundColor: Color(0xFF13161D),
+          automaticallyImplyLeading: false,
+          title: Row(
+            children: <Widget>[
+              Text(
+                'Your Cart',
+                style: TextStyle(fontSize: 25),
+              ),
+              SizedBox(
+                width: 10,
+              ),
+              Image.asset(
+                Provider.of<Data>(context).cartEmpty
+                    ? 'images/shopping-cart-line.png'
+                    : 'images/shopping-cart-fill.png',
+                color: Colors.white,
+              ),
+            ],
+          ),
+        ),
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            SizedBox(
+              height: 15,
+            ),
+            Center(
+              child: Text(
+                'Good food is always cooking',
+                style: GoogleFonts.montserrat(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 20,
+            ),
+            Container(
+              width: 200,
+              height: 50,
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(width: 2, color: Colors.white30)),
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    Text(
+                      'Your cart is empty',
+                      style:
+                          GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+                    ),
+                    Image.asset(
+                      'images/shopping-cart-line.png',
+                      color: Colors.white,
+                      // scale: 1.2,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          ],
+        ),
+      );
+    } else {
       return Scaffold(
         backgroundColor: Color(0xAA121212),
         appBar: AppBar(
@@ -193,628 +327,517 @@ class _CartScreenState extends State<CartScreen> {
           title: Row(
             children: <Widget>[
               Text(
-                'Order Status',
+                'Your Cart',
                 style: GoogleFonts.montserrat(fontSize: 25),
               ),
               SizedBox(
-                width: 13,
+                width: 10,
               ),
               Image.asset(
-                'images/plate.png',
-                width: 28,
-                height: 28,
+                Provider.of<Data>(context).cartEmpty
+                    ? 'images/shopping-cart-line.png'
+                    : 'images/shopping-cart-fill.png',
+                color: Colors.white,
               ),
             ],
           ),
         ),
-        body: _OrderUpdateStream(),
-      );
-    } else {
-      if (Provider.of<Data>(context).cartEmpty ||
-          orders.length == null ||
-          orders.length == 0) {
-        return Scaffold(
-          backgroundColor: Colors.grey[900],
-          appBar: AppBar(
-            elevation: 10,
-            backgroundColor: Color(0xFF13161D),
-            automaticallyImplyLeading: false,
-            title: Row(
+        body: ModalProgressHUD(
+          inAsyncCall: isSpinning,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Stack(
               children: <Widget>[
-                Text(
-                  'Your Cart',
-                  style: TextStyle(fontSize: 25),
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Image.asset(
-                  Provider.of<Data>(context).cartEmpty
-                      ? 'images/shopping-cart-line.png'
-                      : 'images/shopping-cart-fill.png',
-                  color: Colors.white,
-                ),
-              ],
-            ),
-          ),
-          body: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              SizedBox(
-                height: 15,
-              ),
-              Center(
-                child: Text(
-                  'Good food is always cooking',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 20,
-              ),
-              Container(
-                width: 200,
-                height: 50,
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(width: 2, color: Colors.white30)),
-                child: Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: <Widget>[
-                      Text(
-                        'Your cart is empty',
-                        style:
-                            GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+                ListView(
+                  physics: BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics()),
+                  children: <Widget>[
+                    Container(
+                      margin: EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: containerColor,
                       ),
-                      Image.asset(
-                        'images/shopping-cart-line.png',
-                        color: Colors.white,
-                        // scale: 1.2,
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            ],
-          ),
-        );
-      } else {
-        return Scaffold(
-          backgroundColor: Color(0xAA121212),
-          appBar: AppBar(
-            elevation: 10,
-            automaticallyImplyLeading: false,
-            backgroundColor: Color(0xFF13161D),
-            title: Row(
-              children: <Widget>[
-                Text(
-                  'Your Cart',
-                  style: GoogleFonts.montserrat(fontSize: 25),
-                ),
-                SizedBox(
-                  width: 10,
-                ),
-                Image.asset(
-                  Provider.of<Data>(context).cartEmpty
-                      ? 'images/shopping-cart-line.png'
-                      : 'images/shopping-cart-fill.png',
-                  color: Colors.white,
-                ),
-              ],
-            ),
-          ),
-          body: ModalProgressHUD(
-            inAsyncCall: isSpinning,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Stack(
-                children: <Widget>[
-                  ListView(
-                    physics: BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics()),
-                    children: <Widget>[
-                      Container(
-                        margin: EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          color: containerColor,
-                        ),
-                        constraints:
-                            BoxConstraints.expand(height: orderContainerLength),
-                        child: Center(
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: ScrollPhysics(
-                                parent: NeverScrollableScrollPhysics()),
-                            itemBuilder: (context, index) {
-                              return Visibility(
-                                visible: isVisible[index],
-                                child: Stack(
-                                  children: <Widget>[
-                                    orders[index],
-                                    Positioned(
-                                      top: 8,
-                                      left: MediaQuery.of(context).size.width -
-                                          70,
-                                      right: 2,
-                                      child: GestureDetector(
-                                        child: Icon(
-                                          Icons.cancel,
-                                          color: Colors.white,
-                                        ),
-                                        onTap: () {
-                                          setState(() {
-                                            orderContainerLength =
-                                                orderContainerLength - 95;
-                                          });
-                                          Provider.of<Data>(context,
-                                                  listen: false)
-                                              .removeItemFromCart(
-                                                  orders[index].name);
-
-                                          setPricing(
-                                              itemtotal: (itemTotal -
-                                                  orders[index].cost),
-                                              deliverycharge: deliveryCharge,
-                                              taxx: tax);
-                                          setState(() {
-                                            isVisible[index] = false;
-                                          });
-                                        },
+                      constraints:
+                          BoxConstraints.expand(height: orderContainerLength),
+                      child: Center(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          physics: ScrollPhysics(
+                              parent: NeverScrollableScrollPhysics()),
+                          itemBuilder: (context, index) {
+                            return Visibility(
+                              visible: isVisible[index],
+                              child: Stack(
+                                children: <Widget>[
+                                  orders[index],
+                                  Positioned(
+                                    top: 8,
+                                    left:
+                                        MediaQuery.of(context).size.width - 70,
+                                    right: 2,
+                                    child: GestureDetector(
+                                      child: Icon(
+                                        Icons.cancel,
+                                        color: Colors.white,
                                       ),
-                                    )
-                                  ],
-                                ),
-                              );
-                            },
-                            itemCount: orders.length,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        height: 15,
-                      ),
-                      Container(
-                        padding:
-                            EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                        height: 200,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          color: containerColor,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Padding(
-                              padding: const EdgeInsets.only(left: 10, top: 5),
-                              child: Text(
-                                'Bill Details',
-                                style: GoogleFonts.montserrat(
-                                    fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 15, vertical: 10),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: <Widget>[
-                                  Text('Item Total'),
-                                  Text(
-                                      '${String.fromCharCodes(Runes('\u0024'))} $itemTotal')
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.only(
-                                  left: 15, right: 15, bottom: 5),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: <Widget>[
-                                  Text(
-                                    'Delivery Fee',
-                                    style: GoogleFonts.montserrat(
-                                        fontSize: 13,
-                                        color: Colors.blue,
-                                        decoration: TextDecoration.underline),
-                                  ),
-                                  Text(
-                                      '${String.fromCharCodes(Runes('\u0024'))} $deliveryCharge')
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.only(
-                                  left: 15, right: 15, bottom: 5),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: <Widget>[
-                                  Text(
-                                    'Taxes and charges',
-                                    style: GoogleFonts.montserrat(
-                                        fontSize: 13,
-                                        color: Colors.blue,
-                                        decoration: TextDecoration.underline),
-                                  ),
-                                  Text(
-                                      '${String.fromCharCodes(Runes('\u0024'))} $tax')
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                  vertical: 5, horizontal: 15),
-                              child: Divider(
-                                thickness: 2,
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 15, vertical: 10),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: <Widget>[
-                                  Text(
-                                    'To Pay',
-                                    style: GoogleFonts.montserrat(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
-                                  ),
-                                  Text(
-                                    '${String.fromCharCodes(Runes('\u0024'))} $toPay',
-                                    style: GoogleFonts.montserrat(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
-                                  )
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(
-                        height: 25,
-                      ),
-                      Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 20),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          color: containerColor,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Padding(
-                              padding: const EdgeInsets.only(left: 10),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Delivery details',
-                                    style: GoogleFonts.montserrat(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18),
-                                  ),
-                                  FlatButton(
-                                    onPressed: () {
-                                      Vibration.vibrate(duration: 20);
-                                      showModalBottomSheet(
-                                        enableDrag: true,
-                                        isScrollControlled: true,
-                                        context: context,
-                                        builder: (builder) {
-                                          return AddressBottomSheet();
-                                        },
-                                      );
-                                    },
-                                    child: Text(
-                                      'Edit',
-                                      style: GoogleFonts.montserrat(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue,
-                                          fontSize: 15),
+                                      onTap: () {
+                                        setState(() {
+                                          orderContainerLength =
+                                              orderContainerLength - 95;
+                                        });
+                                        Provider.of<Data>(context,
+                                                listen: false)
+                                            .removeItemFromCart(
+                                                orders[index].name);
+
+                                        setPricing(
+                                            itemtotal: (itemTotal -
+                                                orders[index].cost),
+                                            deliverycharge: deliveryCharge,
+                                            taxx: tax);
+                                        setState(() {
+                                          isVisible[index] = false;
+                                        });
+                                      },
                                     ),
                                   )
                                 ],
                               ),
-                            ),
-                            SizedBox(
-                              height: 10,
-                            ),
-                            Padding(
-                              padding: EdgeInsets.only(left: 10),
-                              child: Text(
-                                'Address',
-                                style: GoogleFonts.montserrat(
-                                    fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                            ),
-                            SizedBox(
-                              height: 10,
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10),
-                              child: Container(
-                                child: Text(
-                                  Provider.of<Data>(context).address != 'null'
-                                      ? Provider.of<Data>(context).address
-                                      : '',
-                                  style: GoogleFonts.montserrat(fontSize: 12),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              height: 10,
-                            ),
-                            Divider(
-                              thickness: 2,
-                            ),
-                            SizedBox(height: 10),
-                            Padding(
-                              padding: const EdgeInsets.only(left: 10),
-                              child: Text(
-                                'Phone No',
-                                style: GoogleFonts.montserrat(
-                                    fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                            ),
-                            SizedBox(
-                              height: 10,
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(left: 10),
-                              child: Text(
-                                  Provider.of<Data>(context).phoneNumber ==
-                                          'null'
-                                      ? ''
-                                      : Provider.of<Data>(context).phoneNumber,
-                                  style: GoogleFonts.montserrat(fontSize: 12)),
-                            ),
-                            Visibility(
-                              visible:
-                                  Provider.of<Data>(context).address == null
-                                      ? true
-                                      : false,
-                              child: Container(
-                                width: MediaQuery.of(context).size.width,
-                                child: FlatButton(
-                                  onPressed: () {
-                                    Vibration.vibrate(duration: 20);
-                                    showModalBottomSheet(
-                                        enableDrag: true,
-                                        isScrollControlled: true,
-                                        context: context,
-                                        builder: (builder) {
-                                          return AddressBottomSheet();
-                                        });
-                                  },
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: <Widget>[
-                                      Icon(Icons.add),
-                                      Text(
-                                        'Add Address',
-                                        style: GoogleFonts.montserrat(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16),
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                            );
+                          },
+                          itemCount: orders.length,
                         ),
                       ),
-                      SizedBox(
-                        height: 90,
-                      ),
-                    ],
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 70,
-                      margin: EdgeInsets.only(left: 15, right: 15, bottom: 10),
+                    ),
+                    SizedBox(
+                      height: 15,
+                    ),
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                      height: 200,
                       decoration: BoxDecoration(
-                        color: Colors.green[500],
                         borderRadius: BorderRadius.circular(10),
+                        color: containerColor,
                       ),
-                      child: FlatButton(
-                        onPressed: () {
-                          String _addressP =
-                              Provider.of<Data>(context, listen: false).address;
-                          String _numberP =
-                              Provider.of<Data>(context, listen: false)
-                                  .phoneNumber;
-                          if (_addressP != '' &&
-                              _numberP != '' &&
-                              _addressP != null &&
-                              _numberP != null) {
-                            setOrder();
-                          }
-                        },
-                        child: Center(
-                          child: isOrdering
-                              ? SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10, top: 5),
+                            child: Text(
+                              'Bill Details',
+                              style: GoogleFonts.montserrat(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 15, vertical: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                Text('Item Total'),
+                                Text(
+                                    '${String.fromCharCodes(Runes('\u0024'))} $itemTotal')
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding:
+                                EdgeInsets.only(left: 15, right: 15, bottom: 5),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                Text(
+                                  'Delivery Fee',
+                                  style: GoogleFonts.montserrat(
+                                      fontSize: 13,
+                                      color: Colors.blue,
+                                      decoration: TextDecoration.underline),
+                                ),
+                                Text(
+                                    '${String.fromCharCodes(Runes('\u0024'))} $deliveryCharge')
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding:
+                                EdgeInsets.only(left: 15, right: 15, bottom: 5),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                Text(
+                                  'Taxes and charges',
+                                  style: GoogleFonts.montserrat(
+                                      fontSize: 13,
+                                      color: Colors.blue,
+                                      decoration: TextDecoration.underline),
+                                ),
+                                Text(
+                                    '${String.fromCharCodes(Runes('\u0024'))} $tax')
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                vertical: 5, horizontal: 15),
+                            child: Divider(
+                              thickness: 2,
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 15, vertical: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: <Widget>[
+                                Text(
+                                  'To Pay',
+                                  style: GoogleFonts.montserrat(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
+                                ),
+                                Text(
+                                  '${String.fromCharCodes(Runes('\u0024'))} $toPay',
+                                  style: GoogleFonts.montserrat(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
                                 )
-                              : Text(
-                                  'PLACE  ORDER',
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 25,
+                    ),
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 8, vertical: 20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: containerColor,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Delivery details',
                                   style: GoogleFonts.montserrat(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 18),
                                 ),
-                        ),
+                                FlatButton(
+                                  onPressed: () {
+                                    Vibration.vibrate(duration: 20);
+                                    showModalBottomSheet(
+                                      enableDrag: true,
+                                      isScrollControlled: true,
+                                      context: context,
+                                      builder: (builder) {
+                                        return AddressBottomSheet();
+                                      },
+                                    );
+                                  },
+                                  child: Text(
+                                    'Edit',
+                                    style: GoogleFonts.montserrat(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue,
+                                        fontSize: 15),
+                                  ),
+                                )
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Padding(
+                            padding: EdgeInsets.only(left: 10),
+                            child: Text(
+                              'Address',
+                              style: GoogleFonts.montserrat(
+                                  fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            child: Container(
+                              child: Text(
+                                Provider.of<Data>(context).address ?? ' ',
+                                style: GoogleFonts.montserrat(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Divider(
+                            thickness: 2,
+                          ),
+                          SizedBox(height: 10),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10),
+                            child: Text(
+                              'Phone No',
+                              style: GoogleFonts.montserrat(
+                                  fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10),
+                            child: Text(
+                              Provider.of<Data>(context).phoneNumber ?? ' ',
+                              style: GoogleFonts.montserrat(fontSize: 12),
+                            ),
+                          ),
+                          Visibility(
+                            visible: Provider.of<Data>(context).address == null
+                                ? true
+                                : false,
+                            child: Container(
+                              width: MediaQuery.of(context).size.width,
+                              child: FlatButton(
+                                onPressed: () {
+                                  Vibration.vibrate(duration: 20);
+                                  showModalBottomSheet(
+                                      enableDrag: true,
+                                      isScrollControlled: true,
+                                      context: context,
+                                      builder: (builder) {
+                                        return AddressBottomSheet();
+                                      });
+                                },
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    Icon(Icons.add),
+                                    Text(
+                                      'Add Address',
+                                      style: GoogleFonts.montserrat(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  )
-                ],
-              ),
+                    SizedBox(
+                      height: 90,
+                    ),
+                  ],
+                ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 70,
+                    margin: EdgeInsets.only(left: 15, right: 15, bottom: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.green[500],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: FlatButton(
+                      onPressed: () {
+                        String _addressP =
+                            Provider.of<Data>(context, listen: false).address;
+                        String _numberP =
+                            Provider.of<Data>(context, listen: false)
+                                .phoneNumber;
+                        if (_addressP != '' &&
+                            _numberP != '' &&
+                            _addressP != null &&
+                            _numberP != null) {
+                          setOrder();
+                        }
+                      },
+                      child: Center(
+                        child: isOrdering
+                            ? SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            : Text(
+                                'PLACE  ORDER',
+                                style: GoogleFonts.montserrat(
+                                    fontWeight: FontWeight.bold, fontSize: 18),
+                              ),
+                      ),
+                    ),
+                  ),
+                )
+              ],
             ),
           ),
-        );
-      }
+        ),
+      );
     }
   }
 }
 
-class _OrderUpdateStream extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    var provider = Provider.of<Data>(context);
-    return StreamBuilder<DocumentSnapshot>(
-      stream: fireStoreDataBase
-          .collection(provider.userEmail)
-          .doc('currentOrder')
-          .snapshots(),
-      builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
-        if (!snapshot.hasData) {
-          return Center(
-            child: CircularProgressIndicator(
-              backgroundColor: Colors.lightBlueAccent,
-            ),
-          );
-        }
+// class _OrderUpdateStream extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     var provider = Provider.of<Data>(context);
+//     return StreamBuilder<DocumentSnapshot>(
+//       stream: fireStoreDataBase
+//           .collection(provider.user.email)
+//           .doc('currentOrder')
+//           .snapshots(),
+//       builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+//         if (!snapshot.hasData) {
+//           return Center(
+//             child: CircularProgressIndicator(
+//               backgroundColor: Colors.lightBlueAccent,
+//             ),
+//           );
+//         }
 
-        String ordered;
-        String accepted;
-        String cooking;
-        String outForDelivery;
-        String delivered;
+//         String ordered;
+//         String accepted;
+//         String cooking;
+//         String outForDelivery;
+//         String delivered;
 
-        var data = snapshot.data.data();
-        Map<String, dynamic> values = data;
-        values.forEach((key, value) {
-          if (key.toString() == 'ordered')
-            ordered = value.toString();
-          else if (key.toString() == 'cooking')
-            cooking = value.toString();
-          else if (key.toString() == 'accepted')
-            accepted = value.toString();
-          else if (key.toString() == 'outForDelivery')
-            outForDelivery = value.toString();
-          else if (key.toString() == 'delivered') delivered = value.toString();
-        });
+//         var data = snapshot.data.data();
+//         Map<String, dynamic> values = data;
+//         values.forEach((key, value) {
+//           if (key.toString() == 'ordered')
+//             ordered = value.toString();
+//           else if (key.toString() == 'cooking')
+//             cooking = value.toString();
+//           else if (key.toString() == 'accepted')
+//             accepted = value.toString();
+//           else if (key.toString() == 'outForDelivery')
+//             outForDelivery = value.toString();
+//           else if (key.toString() == 'delivered') delivered = value.toString();
+//         });
 
-        if (delivered == 'yes') {
-          Provider.of<Data>(context, listen: false).setOrderLive(false);
-        }
+//         if (delivered == 'yes') {
+//           Provider.of<Data>(context, listen: false).setOrderLive(false);
+//         }
 
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              ListTile(
-                leading: Container(
-                  width: 25,
-                  height: 25,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(width: 2, color: Colors.white),
-                  ),
-                  child: Icon(
-                    Icons.check,
-                    color: Colors.green,
-                    size: 15,
-                  ),
-                ),
-                title: Text(
-                  'Ordered',
-                  style: GoogleFonts.montserrat(fontSize: 20),
-                ),
-              ),
-              ListTile(
-                leading: Container(
-                  width: 25,
-                  height: 25,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(width: 2, color: Colors.white),
-                  ),
-                  child: accepted == 'yes'
-                      ? Icon(
-                          Icons.check,
-                          color: Colors.green,
-                          size: 15,
-                        )
-                      : null,
-                ),
-                title: Text(
-                  accepted == 'yes'
-                      ? 'Accepted'
-                      : 'Waiting for restaurant to accept your order',
-                  style: GoogleFonts.montserrat(fontSize: 20),
-                ),
-              ),
-              ListTile(
-                leading: Container(
-                  width: 25,
-                  height: 25,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(width: 2, color: Colors.white),
-                  ),
-                  child: cooking == 'yes'
-                      ? Icon(
-                          Icons.check,
-                          color: Colors.green,
-                          size: 15,
-                        )
-                      : null,
-                ),
-                title: Text(
-                  cooking == 'yes'
-                      ? 'Yur food is ready'
-                      : accepted == 'yes'
-                          ? 'Your delicious food is cooking'
-                          : '',
-                  style: GoogleFonts.montserrat(fontSize: 20),
-                ),
-              ),
-              ListTile(
-                leading: Container(
-                  width: 25,
-                  height: 25,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(width: 2, color: Colors.white),
-                  ),
-                  child: outForDelivery == 'yes'
-                      ? Icon(
-                          Icons.check,
-                          color: Colors.green,
-                          size: 15,
-                        )
-                      : null,
-                ),
-                title: Text(
-                  outForDelivery == 'yes' ? 'OUT FOR DELIVERY' : '',
-                  style: GoogleFonts.montserrat(fontSize: 20),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
+//         return SingleChildScrollView(
+//           child: Column(
+//             children: [
+//               ListTile(
+//                 leading: Container(
+//                   width: 25,
+//                   height: 25,
+//                   decoration: BoxDecoration(
+//                     shape: BoxShape.circle,
+//                     border: Border.all(width: 2, color: Colors.white),
+//                   ),
+//                   child: Icon(
+//                     Icons.check,
+//                     color: Colors.green,
+//                     size: 15,
+//                   ),
+//                 ),
+//                 title: Text(
+//                   'Ordered',
+//                   style: GoogleFonts.montserrat(fontSize: 20),
+//                 ),
+//               ),
+//               ListTile(
+//                 leading: Container(
+//                   width: 25,
+//                   height: 25,
+//                   decoration: BoxDecoration(
+//                     shape: BoxShape.circle,
+//                     border: Border.all(width: 2, color: Colors.white),
+//                   ),
+//                   child: accepted == 'yes'
+//                       ? Icon(
+//                           Icons.check,
+//                           color: Colors.green,
+//                           size: 15,
+//                         )
+//                       : null,
+//                 ),
+//                 title: Text(
+//                   accepted == 'yes'
+//                       ? 'Accepted'
+//                       : 'Waiting for restaurant to accept your order',
+//                   style: GoogleFonts.montserrat(fontSize: 20),
+//                 ),
+//               ),
+//               ListTile(
+//                 leading: Container(
+//                   width: 25,
+//                   height: 25,
+//                   decoration: BoxDecoration(
+//                     shape: BoxShape.circle,
+//                     border: Border.all(width: 2, color: Colors.white),
+//                   ),
+//                   child: cooking == 'yes'
+//                       ? Icon(
+//                           Icons.check,
+//                           color: Colors.green,
+//                           size: 15,
+//                         )
+//                       : null,
+//                 ),
+//                 title: Text(
+//                   cooking == 'yes'
+//                       ? 'Yur food is ready'
+//                       : accepted == 'yes'
+//                           ? 'Your delicious food is cooking'
+//                           : '',
+//                   style: GoogleFonts.montserrat(fontSize: 20),
+//                 ),
+//               ),
+//               ListTile(
+//                 leading: Container(
+//                   width: 25,
+//                   height: 25,
+//                   decoration: BoxDecoration(
+//                     shape: BoxShape.circle,
+//                     border: Border.all(width: 2, color: Colors.white),
+//                   ),
+//                   child: outForDelivery == 'yes'
+//                       ? Icon(
+//                           Icons.check,
+//                           color: Colors.green,
+//                           size: 15,
+//                         )
+//                       : null,
+//                 ),
+//                 title: Text(
+//                   outForDelivery == 'yes' ? 'OUT FOR DELIVERY' : '',
+//                   style: GoogleFonts.montserrat(fontSize: 20),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         );
+//       },
+//     );
+//   }
+// }
 
 class OrderCard extends StatelessWidget {
   final name;
@@ -900,4 +923,10 @@ class OrderCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class Obi {
+  String obs;
+  Data haha;
+  int kk;
 }
