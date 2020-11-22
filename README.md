@@ -12,14 +12,14 @@ You need to link your database to your app and structure the database as like th
 
 
 ## App UI and Database Structure
-
+<div>
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/loginscreen.jpg"  height="535" width="270">  
-<img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/menuscreen.jpg" align="center" height="535" width="270">  
+<img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/menuscreen.jpg"  height="535" width="270">  
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/currentitem.jpg" height="535" width="270"><br>  
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/ordersscreen.jpg"  height="535" width="270">  
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/adminOrder.jpg"  height="535" width="270">  
-<img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/acceptedOrders.jpg" height="535" width="270"><br><br>  
-
+<img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/acceptedOrders.jpg" height="535" width="270">
+</div><br><br>
 
 ## Database Structure
 
