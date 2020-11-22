@@ -11,7 +11,7 @@ Foody uses firebase database as its backend database, and firebase auth for auth
 You need to link your database to your app and structure the database as like the photos given below.
 
 
-## App UI and Database Structure
+## App UI 
 <div>
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/loginscreen.jpg"  height="535" width="270">  
 <img src="https://github.com/Premmmm/Foody-Restaurant-App/blob/master/assets/screenshots/menuscreen.jpg"  height="535" width="270">  
